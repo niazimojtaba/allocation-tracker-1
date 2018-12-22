@@ -1,21 +1,21 @@
 package de.codecentric.performance.agent.allocation;
 
 /**
- * Configuration class for the Tracker being used.
+ * Configuration class for the StaticTracker being used.
  */
 public class TrackerConfig {
 
   /* Package prefix of the agent. To be filtered to avoid potential recursions or other issues. */
   public static final String AGENT_PACKAGE_PREFIX = "de/codecentric/performance/agent/";
 
-  /* Tracker class needs to be slash separated package name. */
-  static final String TRACKER_CLASS = "de/codecentric/performance/agent/allocation/Tracker";
+  /* StaticTracker class needs to be slash separated package name. */
+  static final String TRACKER_CLASS = "de/codecentric/performance/agent/allocation/StaticTracker";
 
   /* Static method to be invoked for each construction. */
   public static final String TRACKER_CALLBACK = "constructed";
 
   /* Signature of the callback method. Should accept a single String. */
-  public static final String TRACKER_CALLBACK_SIGNATURE = "(Ljava/lang/String;)V";
+  public static final String TRACKER_CALLBACK_SIGNATURE = "(Ljava/lang/Object;)V";
 
   /*
    * Default number of top classes returned in buildTopList when the argument is <= 0.

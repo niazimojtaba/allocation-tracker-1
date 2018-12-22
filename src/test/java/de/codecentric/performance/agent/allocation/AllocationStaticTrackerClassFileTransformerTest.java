@@ -15,7 +15,7 @@ import org.junit.Test;
 
 import de.codecentric.test.TestBean;
 
-public class AllocationTrackerClassFileTransformerTest {
+public class AllocationStaticTrackerClassFileTransformerTest {
 
   /**
    * The object under test

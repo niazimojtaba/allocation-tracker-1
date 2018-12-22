@@ -22,25 +22,32 @@ import java.util.concurrent.atomic.LongAdder;
  */
 public class Tracker {
 
-  private static ConcurrentHashMap<String, LongAdder> counts = new ConcurrentHashMap<String, LongAdder>(MAP_SIZE,
+  TrackerType typ;
+  public Tracker(TrackerType typ){
+    this.typ = typ;
+  }
+
+  public ConcurrentHashMap<String, LongAdder> counts = new ConcurrentHashMap<String, LongAdder>(MAP_SIZE,
       LOAD_FACTOR, CONCURRENCY_LEVEL);
 
   /*
    * Toggle controlling whether the tracker should track instantiations.
    */
-  private static volatile boolean count = false;
+  public volatile boolean count = false;
 
   /**
    * Call back invoked by BCI inserted code when a class is instantiated. The class name must be an interned/constant
    * value to avoid leaking!
    * 
-   * @param className
+   * @param obj
    *          name of the class that has just been instantiated.
    */
-  public static void constructed(String className) {
+  public void constructed(Object obj) {
+//  public static void constructed(String className) {
     if (!count) {
       return;
     }
+    String className = obj.getClass().getName();
     LongAdder longAdder = counts.get(className);
     // for most cases the long should exist already.
     if (longAdder == null) {
@@ -51,13 +58,19 @@ public class Tracker {
         longAdder = oldValue;
       }
     }
-    longAdder.increment();
+    switch (typ){
+      case COUNT: longAdder.increment();
+        break;
+      case HEAP: longAdder.add(AllocationProfilingAgent.deepSizeOf(obj));
+        break;
+      default: throw new RuntimeException("Unknown type!");
+    }
   }
 
   /**
    * Clears recorded data and starts recording.
    */
-  public static void start() {
+  public void start() {
     counts.clear();
     count = true;
   }
@@ -65,7 +78,7 @@ public class Tracker {
   /**
    * Stops recording.
    */
-  public static void stop() {
+  public void stop() {
     count = false;
   }
 
@@ -79,18 +92,19 @@ public class Tracker {
    *          controls how many results are included in the top list. If <= 0 will default to DEFAULT_AMOUNT.
    * @return a newline separated String containing class names and invocation counts.
    */
-  public static String buildTopList(final int amount) {
+  public String buildTopList(final int amount) {
     Set<Entry<String, LongAdder>> entrySet = counts.entrySet();
     ArrayList<ClassCounter> cc = new ArrayList<ClassCounter>(entrySet.size());
 
     for (Entry<String, LongAdder> entry : entrySet) {
-      cc.add(new ClassCounter(entry.getKey(), entry.getValue().longValue()));
+      int d = typ == TrackerType.HEAP ? 1000 : 1;
+      cc.add(new ClassCounter(entry.getKey(), entry.getValue().longValue() / d));
     }
     Collections.sort(cc);
     StringBuilder sb = new StringBuilder();
     int max = Math.min(amount <= 0 ? DEFAULT_AMOUNT : amount, cc.size());
     for (int i = 0; i < max; i++) {
-      sb.append(cc.get(i).toString());
+      sb.append(cc.get(i).toString() + (typ == TrackerType.HEAP ? "KB" : ""));
       sb.append('\n');
     }
     return sb.toString();
