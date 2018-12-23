@@ -17,9 +17,11 @@ import org.objectweb.asm.Opcodes;
 public class AllocationTrackerClassFileTransformer implements ClassFileTransformer {
 
   private String prefix;
+  private String[] prefixes;
 
   public AllocationTrackerClassFileTransformer(String prefix) {
     this.prefix = prefix;
+    prefixes = prefix.split(",");
     if (prefix.startsWith("java")) {
       AgentLogger.log("You are trying to instrument JVM core classes - this might crash the JVM");
     }
@@ -33,10 +35,15 @@ public class AllocationTrackerClassFileTransformer implements ClassFileTransform
       return classfileBuffer;
     }
 
-    if (!className.startsWith(prefix)) {
-      return classfileBuffer;
+    boolean sw = false;
+    for (String prefix_ : prefixes){
+      if (className.startsWith(prefix_)) {
+        sw = true;
+        break;
+      }
     }
 
+    if (!sw) return classfileBuffer;
     ClassReader classReader = new ClassReader(classfileBuffer);
     ClassWriter classWriter = new ClassWriter(classReader, 0);
     ClassVisitor classVisitor = new ClassVisitor(Opcodes.ASM5, classWriter) {
