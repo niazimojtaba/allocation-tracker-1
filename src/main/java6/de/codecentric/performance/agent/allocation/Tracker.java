@@ -40,11 +40,12 @@ public class Tracker {
    * @param obj
    *          name of the class that has just been instantiated.
    */
-  public void constructed(Object obj) {
+  public void constructed(Object obj) throws IllegalAccessException {
     if (!count) {
       return;
     }
     String className = obj.getClass().getName();
+    if (typ == TrackerType.HEAP &&className.contains("$")) return;
     AtomicLong atomicLong = counts.get(className);
     // for most cases the long should exist already.
     if (atomicLong == null) {
@@ -58,7 +59,7 @@ public class Tracker {
       switch (typ){
         case COUNT: atomicLong.incrementAndGet();
           break;
-        case HEAP: atomicLong.addAndGet(AllocationProfilingAgent.deepSizeOf(obj));
+        case HEAP: atomicLong.addAndGet(AllocationProfilingAgent.deepSizeOfRecursive(obj));
           break;
         default: throw new RuntimeException("Unknown type!");
       }
@@ -95,8 +96,8 @@ public class Tracker {
     ArrayList<ClassCounter> cc = new ArrayList<ClassCounter>(entrySet.size());
 
     for (Entry<String, AtomicLong> entry : entrySet) {
-      int d = typ == TrackerType.HEAP ? 1000 : 1;
-      cc.add(new ClassCounter(entry.getKey(), entry.getValue().longValue() / d));
+      long d = typ == TrackerType.HEAP ? 1000 : 1;
+      cc.add(new ClassCounter(entry.getKey(), (entry.getValue().longValue()) / d));
     }
     Collections.sort(cc);
     StringBuilder sb = new StringBuilder();

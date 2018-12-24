@@ -7,6 +7,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Stack;
@@ -23,6 +24,7 @@ import de.codecentric.performance.agent.allocation.mbean.AgentHeap;
  */
 public class AllocationProfilingAgent {
   private static Instrumentation instrumentation;
+  private static Map<String, Long>catchSize = new HashMap<>();
   public static void premain(String agentArgs, Instrumentation inst) {
     AllocationProfilingAgent.instrumentation = inst;
     String prefix = agentArgs;
@@ -68,6 +70,11 @@ public class AllocationProfilingAgent {
     return result;
   }
 
+  public static long deepSizeOfRecursive(Object obj) throws IllegalAccessException {
+    Map visited = new IdentityHashMap();
+    long len = internalSizeOfRecursive(obj, visited);
+    return len;
+  }
   /**
    * Returns true if this is a well-known shared flyweight.
    * For example, interned Strings, Booleans and Number objects
@@ -100,6 +107,44 @@ public class AllocationProfilingAgent {
     return obj == null
             || visited.containsKey(obj)
             || isSharedFlyweight(obj);
+  }
+
+  private static long internalSizeOfRecursive(Object obj, Map visited) throws IllegalAccessException {
+    long length = 0;
+    if (skipObject(obj, visited)) {
+      return 0;
+    }
+    String hashObj = obj.getClass().getName();
+    if (catchSize.containsKey(hashObj)) return catchSize.get(hashObj);
+    visited.put(obj, null);
+    Class clazz = obj.getClass();
+    if (clazz.isArray()) {
+      if (!clazz.getComponentType().isPrimitive()) {
+        length = length + Array.getLength(obj);
+        for (int i = 0; i < Array.getLength(obj); i++) {
+          if(Array.get(obj, i) == null) continue;
+          long len = internalSizeOfRecursive(Array.get(obj, i), visited);
+          length = length + len;
+        }
+      }
+    } else {
+      // add all non-primitive fields to the stack
+      while (clazz != null) {
+        Field[] fields = clazz.getDeclaredFields();
+        for (Field field : fields) {
+          if (!Modifier.isStatic(field.getModifiers())
+                  && !field.getType().isPrimitive()) {
+            field.setAccessible(true);
+            if(field.get(obj) == null) continue;
+            Long len = internalSizeOfRecursive(field.get(obj), visited);
+            length = length + len;
+          }
+        }
+        clazz = clazz.getSuperclass();
+      }
+    }
+    catchSize.put(obj.getClass().getName(), length + sizeOf(obj));
+    return length + sizeOf(obj);
   }
 
   private static long internalSizeOf(

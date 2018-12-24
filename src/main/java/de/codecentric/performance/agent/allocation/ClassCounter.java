@@ -17,7 +17,7 @@ public class ClassCounter implements Comparable<ClassCounter> {
   public int compareTo(ClassCounter that) {
     long x = that.count;
     long y = this.count;
-    return (x < y) ? -1 : ((x == y) ? 0 : 1);
+    return Double.compare(x, y);
   }
 
   @Override

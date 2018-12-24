@@ -6,7 +6,7 @@ public class StaticTracker {
   private static Tracker trackerHeap = new Tracker(TrackerType.HEAP);
   private static Tracker trackerCount = new Tracker(TrackerType.COUNT);
 
-  public static void constructed(Object obj) {
+  public static void constructed(Object obj) throws IllegalAccessException {
     trackerHeap.constructed(obj);
     trackerCount.constructed(obj);
   }
