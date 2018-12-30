@@ -98,8 +98,8 @@ public class Tracker {
     ArrayList<ClassCounter> cc = new ArrayList<ClassCounter>(entrySet.size());
 
     for (Entry<String, LongAdder> entry : entrySet) {
-      long d = typ == TrackerType.HEAP ? 1000 : 1;
-      cc.add(new ClassCounter(entry.getKey(), (long) (entry.getValue().longValue()) / d));
+      int d = typ == TrackerType.HEAP ? 1024 : 1;
+      cc.add(new ClassCounter(entry.getKey(), ((entry.getValue().longValue()) / d)));
     }
     Collections.sort(cc);
     StringBuilder sb = new StringBuilder();
